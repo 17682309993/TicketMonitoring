@@ -67,24 +67,51 @@ echo "可见性：1) 公开（所有人可看）  2) 私有（只有你能看）
 printf "选择 1 或 2（直接回车 = 2 私有）："
 read -r VIS
 case "${VIS:-2}" in
-  1) VIS_FLAG="--public" ;;
-  *) VIS_FLAG="--private" ;;
+  1) VIS_FLAG="--public";  WANT_PRIVATE="false" ;;
+  *) VIS_FLAG="--private"; WANT_PRIVATE="true"  ;;
 esac
 
-# ---------- 5. 创建仓库并推送 ----------
+# ---------- 5. 创建仓库并关联远程 ----------
+FULL="$USER_NAME/$REPO_NAME"
 echo
+if ! gh repo view "$FULL" >/dev/null 2>&1; then
+  echo "· 正在创建仓库 $FULL …"
+  gh repo create "$FULL" $VIS_FLAG \
+    --description "演唱会回流票监控（大麦/猫眼/纷玩岛/票星球），支持 Bark 推送" \
+    || { echo "✗ 创建仓库失败"; pause; exit 1; }
+fi
+
+# 可见性以你的选择为准（不依赖 gh 参数是否生效）
+CUR_PRIV=$(gh api "repos/$FULL" --jq .private 2>/dev/null)
+if [ -n "$CUR_PRIV" ] && [ "$CUR_PRIV" != "$WANT_PRIVATE" ]; then
+  if gh api -X PATCH "repos/$FULL" -F private="$WANT_PRIVATE" >/dev/null 2>&1; then
+    if [ "$WANT_PRIVATE" = "false" ]; then echo "· 仓库已设为公开"; else echo "· 仓库已设为私有"; fi
+  fi
+fi
+
+ORIGIN_WANT="https://github.com/$FULL.git"
 if git remote get-url origin >/dev/null 2>&1; then
-  echo "· 已存在远程 origin：$(git remote get-url origin)"
-  echo "· 直接推送 main 分支…"
-  git push -u origin main || { echo "✗ 推送失败"; pause; exit 1; }
-elif gh repo view "$USER_NAME/$REPO_NAME" >/dev/null 2>&1; then
-  echo "· GitHub 上已有同名仓库 $USER_NAME/$REPO_NAME，关联后推送…"
-  git remote add origin "https://github.com/$USER_NAME/$REPO_NAME.git"
-  git push -u origin main || { echo "✗ 推送失败"; pause; exit 1; }
+  git remote set-url origin "$ORIGIN_WANT"
 else
-  echo "· 正在创建仓库 $USER_NAME/$REPO_NAME 并推送…"
-  gh repo create "$REPO_NAME" $VIS_FLAG --source=. --remote=origin --push --description "演唱会回流票监控（大麦/猫眼/纷玩岛/票星球），支持 Bark 推送" \
-    || { echo "✗ 创建或推送失败"; pause; exit 1; }
+  git remote add origin "$ORIGIN_WANT"
+fi
+
+# ---------- 6. 推送：git 不通时自动改走 API ----------
+echo "· 正在推送代码…"
+CAN_GIT=0
+nc -z -G 5 github.com 443 >/dev/null 2>&1 && CAN_GIT=1
+
+if [ "$CAN_GIT" = "1" ] && GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=20 git push -u origin main 2>/dev/null; then
+  echo "✓ 推送完成（git）"
+else
+  if [ "$CAN_GIT" = "1" ]; then
+    echo "! git push 被拒绝或中断，改用 GitHub API 推送…"
+  else
+    echo "! github.com:443 连不通（国内网络常见），改走 GitHub API 推送…"
+  fi
+  PY="$PWD/.venv/bin/python"
+  [ -x "$PY" ] || PY=$(command -v python3)
+  "$PY" 推送GitHub.py --repo "$FULL" || { echo "✗ 推送失败，请检查网络后重试"; pause; exit 1; }
 fi
 
 URL="https://github.com/$USER_NAME/$REPO_NAME"
