@@ -79,6 +79,7 @@ docker run -d --restart=unless-stopped \
 ./.venv/bin/python 诊断.py pxq <showId>         # 打印接口原始返回，判断是配置错还是被限流
 ./.venv/bin/python 配置Bark.py <key 或整条地址>  # 配 Bark 并试推
 ./.venv/bin/python 测试提醒.py                  # 测试所有通知渠道
+./.venv/bin/python 推送GitHub.py                # 经 GitHub API 推送（git push 不通时用）
 ```
 
 更详细的中文说明见 [使用说明.md](使用说明.md)。
@@ -88,6 +89,7 @@ docker run -d --restart=unless-stopped \
 - **一直报 `1270 当前访客较多`**：九成是 `show_id` 填成了 `stdShowId`，用 `查演出ID.py` 重新取。
 - **`22029000 服务熔断异常`**：请求过密被限流，把 `interval_sec` 调到 5~10，等几分钟再跑。
 - **`22029998 / RE010028204063`**：平台侧业务状态（暂停销售、未开售），不是程序问题。
+- **`git push` 报 `Recv failure: Operation timed out`**：`github.com:443` 在国内常被阻断，但 `api.github.com` 通常可用。用 `./.venv/bin/python 推送GitHub.py` 走 API 推送即可；`上传到GitHub.command` 检测到连不通会自动切换到这条路。
 
 ## 注意
 
