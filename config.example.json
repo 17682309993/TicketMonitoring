@@ -1,0 +1,40 @@
+{
+  "proxy": null,
+  "auth": {
+    "pxq": {
+      "cookie": "",
+      "access_token": "",
+      "headers": {}
+    },
+    "my": {
+      "token": ""
+    },
+    "dm": {
+      "cookie": ""
+    }
+  },
+  "token": {
+    "my": ""
+  },
+  "monitor_list": [
+    {
+      "show_id": "填 showId，不是 stdShowId",
+      "show_name": "备注名，随便写",
+      "platform": 3,
+      "deadline": "2026-12-31 23:59:59",
+      "interval_sec": 3
+    }
+  ],
+  "notice": {
+    "macos_notify": true,
+    "bark_key": "",
+    "bark_server": "",
+    "bark_sound": "alarm",
+    "bark_group": "回流票",
+    "email": "",
+    "SMTP": "",
+    "smtp_host": "smtp.qq.com",
+    "smtp_port": 587,
+    "interval_sec": 300
+  }
+}
